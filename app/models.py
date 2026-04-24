@@ -18,6 +18,7 @@ class Atendimento(Base):
     atenAnalistaCliente = Column(String, nullable=True)
     atenAnalistaInterno = Column(String, nullable=True)
     atenSituacaoAtual = Column(String, nullable=True)
+    atenPrioridade = Column(Integer, nullable=True)
 
     # Grupo 2: Dados Complementares
     atenDescricao = Column(String, nullable=True)
@@ -44,6 +45,7 @@ class AtendimentoBase(BaseModel):
     atenAnalistaCliente: Optional[str] = None
     atenAnalistaInterno: Optional[str] = None
     atenSituacaoAtual: Optional[str] = None
+    atenPrioridade: Optional[int] = None
     
     atenDescricao: Optional[str] = None
     atenCausa: Optional[str] = None
