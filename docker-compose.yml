@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  shub_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/code/data
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///data/atendimentos.db}
+    expose:
+      - "8000"
+
+  shub_web:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./static:/usr/share/nginx/html
+    depends_on:
+      - shub_app

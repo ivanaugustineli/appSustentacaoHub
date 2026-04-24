@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Atendimentos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="logo">SustentaçãoHub</div>
+        <div class="header-actions">
+            <div class="view-toggle">
+                <button id="btnViewCards" class="btn btn-toggle active">Cards</button>
+                <button id="btnViewList" class="btn btn-toggle">Lista</button>
+            </div>
+            <button id="btnNovoAtendimento" class="btn btn-primary">+ Novo Atendimento</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <div id="atendimentosList" class="atendimentos-grid">
+            <!-- Cards gerados via JS -->
+        </div>
+    </main>
+
+    <!-- Modal Form -->
+    <div id="modalForm" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="btnCloseModal">&times;</span>
+            <h2 id="modalTitle">Novo Atendimento</h2>
+            
+            <form id="atendimentoForm">
+                <input type="hidden" id="atendimentoId">
+
+                <!-- SEÇÃO 1: Dados Principais -->
+                <div class="section-card sec-azul">
+                    <div class="section-header">
+                        <span class="badge">1</span>
+                        <h3>Dados Principais</h3>
+                    </div>
+                    <div class="section-body grid-2">
+                        <div class="form-group">
+                            <label>Número Primário</label>
+                            <input type="text" id="atenNumeroPrimario" placeholder="ID no cliente">
+                        </div>
+                        <div class="form-group">
+                            <label>Número Secundário</label>
+                            <input type="text" id="atenNumeroSecundario" placeholder="Tarefa original">
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Título</label>
+                            <input type="text" id="atenTitulo" placeholder="Descrição resumida">
+                        </div>
+                        <div class="form-group">
+                            <label>Data de Abertura</label>
+                            <input type="text" id="atenDataAbertura" class="date-input" placeholder="DD/MM/AAAA HH:MM">
+                        </div>
+                        <div class="form-group">
+                            <label>Data de Recepção</label>
+                            <input type="text" id="atenDataRecepcao" class="date-input" placeholder="DD/MM/AAAA HH:MM">
+                        </div>
+                        <div class="form-group">
+                            <label>Analista Cliente</label>
+                            <input type="text" id="atenAnalistaCliente" placeholder="Responsável no cliente">
+                        </div>
+                        <div class="form-group">
+                            <label>Analista Interno</label>
+                            <input type="text" id="atenAnalistaInterno" placeholder="Responsável interno">
+                        </div>
+                        <div class="form-group">
+                            <label>Situação Atual</label>
+                            <select id="atenSituacaoAtual">
+                                <option value="">Selecione...</option>
+                                <option value="Aguardando Atendimento">Aguardando Atendimento</option>
+                                <option value="Em Atendimento">Em Atendimento</option>
+                                <option value="Temporariamente Suspenso">Temporariamente Suspenso</option>
+                                <option value="Aguardando Cliente">Aguardando Cliente</option>
+                                <option value="Em Testes">Em Testes</option>
+                                <option value="Testado">Testado</option>
+                                <option value="Em Homologação">Em Homologação</option>
+                                <option value="Aguardando Implantação">Aguardando Implantação</option>
+                                <option value="Finalizado">Finalizado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO 2: Dados Complementares -->
+                <div class="section-card sec-ambar">
+                    <div class="section-header">
+                        <span class="badge">2</span>
+                        <h3>Dados Complementares</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="form-group">
+                            <label>Descrição</label>
+                            <textarea id="atenDescricao" placeholder="Texto completo do atendimento"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Causa Raiz</label>
+                            <textarea id="atenCausa" placeholder="Análise da causa raiz"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Solução</label>
+                            <textarea id="atenSolucao" placeholder="Descrição da resolução aplicada"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Observação</label>
+                            <textarea id="atenObservacao" placeholder="Notas adicionais"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO 3: Dados da Solução -->
+                <div class="section-card sec-verde">
+                    <div class="section-header">
+                        <span class="badge">3</span>
+                        <h3>Dados da Solução</h3>
+                    </div>
+                    <div class="section-body grid-2">
+                        <div class="form-group">
+                            <label>Tipo *</label>
+                            <select id="atenTipo" required>
+                                <option value="">Selecione...</option>
+                                <option value="INC">INC</option>
+                                <option value="PRB">PRB</option>
+                                <option value="RITM">RITM</option>
+                                <option value="SCTASK">SCTASK</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Vertical *</label>
+                            <select id="atenVertical" required>
+                                <option value="">Selecione...</option>
+                                <option value="<Nenhuma>">&lt;Nenhuma&gt;</option>
+                                <option value="Bare">Bare</option>
+                                <option value="Holding">Holding</option>
+                                <option value="Previdência">Previdência</option>
+                                <option value="VIDA">VIDA</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Sistema *</label>
+                            <select id="atenSistema" required>
+                                <option value="">Selecione...</option>
+                                <option value="<Nenhum>">&lt;Nenhum&gt;</option>
+                                <option value="SISE">SISE</option>
+                                <option value="BVPNEXT">BVPNEXT</option>
+                                <option value="BVPVIDA">BVPVIDA</option>
+                                <option value="PEGA">PEGA</option>
+                                <option value="PIS">PIS</option>
+                                <option value="PIVI">PIVI</option>
+                                <option value="SRVP">SRVP</option>
+                                <option value="VPRS">VPRS</option>
+                                <option value="PORTLET ACEITE DIGITAL">PORTLET ACEITE DIGITAL</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo Ocorrência</label>
+                            <select id="atenTipoOcorrencia">
+                                <option value="">Selecione...</option>
+                                <option value="<Nenhuma>">&lt;Nenhuma&gt;</option>
+                                <option value="Concorrência">Concorrência</option>
+                                <option value="Consulta">Consulta</option>
+                                <option value="Handover">Handover</option>
+                                <option value="Indevido">Indevido</option>
+                                <option value="Infraestrutura">Infraestrutura</option>
+                                <option value="Legado">Legado</option>
+                                <option value="Melhoria">Melhoria</option>
+                                <option value="Operacional">Operacional</option>
+                                <option value="Performance">Performance</option>
+                                <option value="Prob. Outro Sistema">Prob. Outro Sistema</option>
+                                <option value="Problema Sistêmico">Problema Sistêmico</option>
+                                <option value="Projeto">Projeto</option>
+                                <option value="Suporte">Suporte</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo Solução *</label>
+                            <select id="atenTipoSolucao" required>
+                                <option value="">Selecione...</option>
+                                <option value="<Nenhuma>">&lt;Nenhuma&gt;</option>
+                                <option value="Ação Pendente">Ação Pendente</option>
+                                <option value="Contigencial">Contigencial</option>
+                                <option value="Definitiva">Definitiva</option>
+                                <option value="Não Corresponde">Não Corresponde</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Data Limite</label>
+                            <input type="text" id="atenDataLimite" class="date-input" placeholder="DD/MM/AAAA HH:MM">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="btnCancel">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Atendimento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
