@@ -11,21 +11,76 @@
 </head>
 <body>
     <header class="app-header">
-        <div class="logo">SustentaçãoHub</div>
+        <div class="logo-container">
+            <div class="logo">SustentaçãoHub</div>
+            <div class="app-subtitle">Gerenciador de Atendimentos de Sustentação</div>
+        </div>
         <div class="header-actions">
-            <div class="view-toggle">
-                <button id="btnViewCards" class="btn btn-toggle active">Cards</button>
-                <button id="btnViewList" class="btn btn-toggle">Lista</button>
-            </div>
             <button id="btnNovoAtendimento" class="btn btn-primary">+ Novo Atendimento</button>
         </div>
     </header>
 
     <main class="container">
-        <div id="atendimentosList" class="atendimentos-grid">
-            <!-- Cards gerados via JS -->
+        <!-- Menu lateral de filtros -->
+        <aside id="sidebarFiltros" class="sidebar-filtros">
+            <h3>Filtros & Agrupamento</h3>
+            
+            <div class="filter-group">
+                <label>Analista Cliente</label>
+                <select id="filterAnalistaClienteCards" class="filter-select">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label>Analista Interno</label>
+                <select id="filterAnalistaInternoCards" class="filter-select">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Situação Atual</label>
+                <select id="filterSituacaoAtualCards" class="filter-select">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+
+            <h4 class="mt-4">Agrupar Por</h4>
+            <div class="group-options">
+                <label><input type="radio" name="groupCards" value="none" checked> Nenhum</label>
+                <label><input type="radio" name="groupCards" value="atenAnalistaCliente"> Analista Cliente</label>
+                <label><input type="radio" name="groupCards" value="atenAnalistaInterno"> Analista Interno</label>
+                <label><input type="radio" name="groupCards" value="atenSituacaoAtual"> Situação Atual</label>
+            </div>
+        </aside>
+
+        <div id="atendimentosList" class="atendimentos-table-container">
+            <!-- Tabela gerada via JS -->
         </div>
     </main>
+
+    <footer id="appFooter" class="app-footer">
+        <div class="footer-container">
+            <div class="footer-section">
+                <div class="footer-header">Resumo por Tipo</div>
+                <div id="footerTypes" class="footer-summary-row">
+                    <!-- Sumário por Tipo (AJ11) -->
+                </div>
+            </div>
+            
+            <div class="footer-section">
+                <div class="footer-header">Resumo por Situação</div>
+                <div id="footerSituations" class="footer-summary-row">
+                    <!-- Sumário por Situação (AJ10) -->
+                </div>
+            </div>
+            
+            <div class="footer-total">
+                <span id="statTotal">Total de Atendimentos: 0</span>
+            </div>
+        </div>
+    </footer>
 
     <!-- Modal Form -->
     <div id="modalForm" class="modal">
@@ -37,7 +92,7 @@
                 <input type="hidden" id="atendimentoId">
 
                 <!-- SEÇÃO 1: Dados Principais -->
-                <div class="section-card sec-azul">
+                <div class="section-card sec-primary">
                     <div class="section-header">
                         <span class="badge">1</span>
                         <h3>Dados Principais</h3>
@@ -85,6 +140,10 @@
                                 <option value="Aguardando Implantação">Aguardando Implantação</option>
                                 <option value="Finalizado">Finalizado</option>
                             </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Prioridade</label>
+                            <input type="number" id="atenPrioridade" placeholder="Grau de prioridade" min="1">
                         </div>
                     </div>
                 </div>

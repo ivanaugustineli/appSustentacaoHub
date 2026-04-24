@@ -47,26 +47,27 @@ Os modelos Pydantic e **registros na tabela SQLite** (uma tabela de atendimentos
 | atenAnalistaCliente  | (string)   | Analista Cliente  | 6 | Responsável no cliente. |
 | atenAnalistaInterno  | (string)   | Analista Interno  | 7 | Responsável interno. |
 | atenSituacaoAtual    | Enum (Aguardando Atendimento, Em Atendimento, Temporariamente Suspenso, Aguardando Cliente, Em Testes, Testado, Em Homologação, Aguardando Implantação, Finalizado) | Situação Atual    | 8 | Situação atual do atendimento. |
+| atenPrioridade       | integer    | Prioridade | 9 | Grau de Prioridade do atendimento. |
 
 ### 2.2. Grupo 2: Dados Complementares (Detalhes do Atendimento)
 
 | Campo                | Tipo       | Nome Apresentável | Prioridade | Descrição Interna                          |
 |----------------------|------------|-------------------|------------|--------------------------------------------|
-| atenDescricao        | (string)   | Descrição         | 9 | Texto completo do atendimento. |
-| atenCausa            | (string)   | Causa Raiz        | 10 | Análise da causa raiz. |
-| atenSolucao          | (string)   | Solução           | 11 | Descrição da resolução aplicada. |
-| atenObservacao       | (string)   | Observação        | 12 | Notas adicionais e acompanhamento. |
+| atenDescricao        | (string)   | Descrição         | 10 | Texto completo do atendimento. |
+| atenCausa            | (string)   | Causa Raiz        | 11 | Análise da causa raiz. |
+| atenSolucao          | (string)   | Solução           | 12 | Descrição da resolução aplicada. |
+| atenObservacao       | (string)   | Observação        | 13 | Notas adicionais e acompanhamento. |
 
 ### 2.3. Grupo 3: Dados da Solução (Classificações e Prazos)
 
 | Campo                | Tipo       | Nome Apresentável | Prioridade | Descrição Interna                          |
 |----------------------|------------|-------------------|------------|--------------------------------------------|
-| atenTipo             | Enum (INC, PRB, RITM, SCTASK) | Tipo de Atendimento | 13 | Classificação do atendimento. |
-| atenVertical         | Enum (<Nenhuma>, Bare, Holding, Previdência, VIDA) | Vertical | 14 | Área de negócio do cliente. |
-| atenSistema          | Enum (<Nenhum>, SISE, BVPNEXT, BVPVIDA, PEGA, PIS, PIVI, SRVP, VPRS, PORTLET ACEITE DIGITAL, Outros) | Sistema | 15 | Sistema técnico afetado. |
-| atenTipoOcorrencia   | Enum (<Nenhuma>, Concorrência, Consulta, Handover, Indevido, Infraestrutura, Legado, Melhoria, Operacional, Performance, Prob. Outro Sistema, Problema Sistêmico, Projeto, Suporte) | Tipo de Ocorrência | 16 | Classificação da ocorrência. |
-| atenTipoSolucao      | Enum (<Nenhuma>,Ação Pendente, Contigencial, Definitiva, Não Corresponde) | Tipo de Solução | 17 | Tipo de solução aplicada. |
-| atenDataLimite       | (datetime) | Data Limite       | 18 | Prazo para resolução do atendimento. |
+| atenTipo             | Enum (INC, PRB, RITM, SCTASK) | Tipo de Atendimento | 14 | Classificação do atendimento. |
+| atenVertical         | Enum (<Nenhuma>, Bare, Holding, Previdência, VIDA) | Vertical | 15 | Área de negócio do cliente. |
+| atenSistema          | Enum (<Nenhum>, SISE, BVPNEXT, BVPVIDA, PEGA, PIS, PIVI, SRVP, VPRS, PORTLET ACEITE DIGITAL, Outros) | Sistema | 16 | Sistema técnico afetado. |
+| atenTipoOcorrencia   | Enum (<Nenhuma>, Concorrência, Consulta, Handover, Indevido, Infraestrutura, Legado, Melhoria, Operacional, Performance, Prob. Outro Sistema, Problema Sistêmico, Projeto, Suporte) | Tipo de Ocorrência | 17 | Classificação da ocorrência. |
+| atenTipoSolucao      | Enum (<Nenhuma>,Ação Pendente, Contigencial, Definitiva, Não Corresponde) | Tipo de Solução | 18 | Tipo de solução aplicada. |
+| atenDataLimite       | (datetime) | Data Limite       | 19 | Prazo para resolução do atendimento. |
 
 ## 3. Configuração Docker (Docker-only policy)
 
@@ -98,7 +99,7 @@ Os modelos Pydantic e **registros na tabela SQLite** (uma tabela de atendimentos
 
 | Grupo                | Nome Apresentável | Prioridade | Visibilidade | Campos Pertencentes                                      |
 |----------------------|-------------------|------------|--------------|----------------------------------------------------------|
-| Dados Principais     | Dados Principais  | 1 | Sempre Visível | atenNumeroPrimario, atenNumeroSecundario, atenTitulo, atenDataAbertura, atenDataRecepcao, atenAnalistaCliente, atenAnalistaInterno |
+| Dados Principais     | Dados Principais  | 1 | Sempre Visível | atenNumeroPrimario, atenNumeroSecundario, atenTitulo, atenDataAbertura, atenDataRecepcao, atenAnalistaCliente, atenAnalistaInterno, atenSituacaoAtual, atenPrioridade |
 | Dados Complementares | Dados Complementares | 2 | Expansível | atenDescricao, atenCausa, atenSolucao, atenObservacao |
 | Dados da Solução     | Dados da Solução | 3 | Expansível | atenTipo, atenVertical, atenSistema, atenTipoOcorrencia, atenTipoSolucao, atenDataLimite |
 
@@ -108,7 +109,7 @@ Os modelos Pydantic e **registros na tabela SQLite** (uma tabela de atendimentos
 - **Ordem de Apresentação:** 
   1. Exibir **Dados Principais** sempre visível (primeira seção do card/modal).
   2. **Dados Complementares** e **Dados da Solução** como seções expansíveis abaixo.
-- **Ordem dos Campos Dentro do Grupo:** Respeitar a prioridade numérica definida (1 a 17) sequencialmente conforme o grupo.
+- **Ordem dos Campos Dentro do Grupo:** Respeitar a prioridade numérica definida (1 a 19) sequencialmente conforme o grupo.
 - **Responsividade:** Em dispositivos móveis, considerar layout empilhado (stacked) para melhor legibilidade.
 
 ### 6.3. Ordem de Render Esperada
@@ -121,7 +122,9 @@ Grupo 1 - Dados Principais (Sempre Visível)
 ├─ Data de Abertura
 ├─ Data de Recepção
 ├─ Analista Cliente
-└─ Analista Interno
+├─ Analista Interno
+├─ Situação Atual
+└─ Prioridade
 
 Grupo 2 - Dados Complementares [+]
 ├─ Descrição
@@ -139,6 +142,14 @@ Grupo 3 - Dados da Solução [+]
 └─ Data Limite
 ```
 
+### 6.4. Navegação e Resumos
+
+- **Sidebar de Filtros:** Deve ser fixa no lado esquerdo para facilitar o acesso aos filtros e agrupamentos da tabela.
+- **Rodapé Dinâmico:** O rodapé deve apresentar resumos automáticos baseados nos dados visíveis:
+    - **Botão "Todos":** Permite limpar todos os filtros aplicados instantaneamente.
+    - **Por Tipo de Atendimento:** Sumariza quantidades por INC, PRB, etc. Estes itens são clicáveis para filtrar a lista.
+    - **Por Situação Atual:** Sumariza quantidades para cada situação presente nos registros exibidos. Estes itens são clicáveis para filtrar a lista.
+
 ## 7. Padrões de Formulário (Criação e Edição)
 
 - Os formulários de inclusão e alteração de atendimentos devem seguir **exatamente a mesma ordem de grupos e prioridades** da seção 2 (Esquema de Dados).
@@ -152,15 +163,15 @@ Cada formulário deve conter **3 seções claramente delimitadas** correspondend
 
 | Seção | Grupo | Cor Indicadora | Campos | Notas |
 |-------|-------|-------|--------|-------|
-| Seção 1 | Dados Principais | Azul | Prioridades 1-7 | Sempre expandida, data defaults automáticos |
-| Seção 2 | Dados Complementares | Âmbar | Prioridades 8-11 | Expandida por padrão, áreas de texto |
-| Seção 3 | Dados da Solução | Verde | Prioridades 12-17 | Expandida por padrão, selects e datas |
+| Seção 1 | Dados Principais | Azul | Prioridades 1-9 | Sempre expandida, data defaults automáticos |
+| Seção 2 | Dados Complementares | Âmbar | Prioridades 10-13 | Expandida por padrão, áreas de texto |
+| Seção 3 | Dados da Solução | Verde | Prioridades 14-19 | Expandida por padrão, selects e datas |
 
 ### 7.2. Diretrizes de Apresentação em Formulário
 
 - **Cada seção deve ter um header** identificando o grupo (ex: "1. Dados Principais")
 - **Usar badges numerados** (1, 2, 3) para identificar os grupos
-- **Dentro de cada seção**, campos em ordem rigorosa de prioridade (1 a 17)
+- **Dentro de cada seção**, campos em ordem rigorosa de prioridade (1 a 19)
 - **Campos obrigatórios** dentro do Grupo 3 (Tipo, Vertical, Sistema, Tipo Ocorrência, Tipo Solução)
 - **Campos de data** preenchem automaticamente com data/hora atual se vazios
 - **Todos os campos de texto** com placeholders descritivos
@@ -179,33 +190,35 @@ Cada formulário deve conter **3 seções claramente delimitadas** correspondend
 │ 5️⃣  Data de Recepção         [__________]   │
 │ 6️⃣  Analista Cliente         [__________]   │
 │ 7️⃣  Analista Interno         [__________]   │
+│ 8️⃣  Situação Atual           [▼ Selecione]   │
+│ 9️⃣  Prioridade               [__________]   │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
 │ SEÇÃO 2: DADOS COMPLEMENTARES 🟡            │
 ├─────────────────────────────────────────────┤
-│ 8️⃣  Descrição                               │
+│ 1️⃣0️⃣ Descrição                               │
 │     [_______________][_______________]      │
 │                                             │
-│ 9️⃣  Causa Raiz                              │
+│ 1️⃣1️⃣ Causa Raiz                              │
 │     [_______________][_______________]      │
 │                                             │
-│ 🔟 Solução                                  │
+│ 1️⃣2️⃣ Solução                                  │
 │     [_______________][_______________]      │
 │                                             │
-│ 1️⃣1️⃣  Observação                             │
+│ 1️⃣3️⃣ Observação                             │
 │     [_______________][_______________]      │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
 │ SEÇÃO 3: DADOS DA SOLUÇÃO 🟢                │
 ├─────────────────────────────────────────────┤
-│ 1️⃣2️⃣  Tipo *          [▼ Selecione]        │
-│ 1️⃣3️⃣  Vertical *      [▼ Selecione]        │
-│ 1️⃣4️⃣  Sistema *       [▼ Selecione]        │
-│ 1️⃣5️⃣  Tipo Ocorrência [▼ Selecione]        │
-│ 1️⃣6️⃣  Tipo Solução *  [▼ Selecione]        │
-│ 1️⃣7️⃣  Data Limite     [__________]         │
+│ 1️⃣4️⃣ Tipo *          [▼ Selecione]        │
+│ 1️⃣5️⃣ Vertical *      [▼ Selecione]        │
+│ 1️⃣6️⃣ Sistema *       [▼ Selecione]        │
+│ 1️⃣7️⃣ Tipo Ocorrência [▼ Selecione]        │
+│ 1️⃣8️⃣ Tipo Solução *  [▼ Selecione]        │
+│ 1️⃣9️⃣ Data Limite     [__________]         │
 └─────────────────────────────────────────────┘
 ```
 
