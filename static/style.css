@@ -529,6 +529,91 @@ body {
     font-size: 0.85rem;
 }
 
+/* AJ20: Componente Multi-Select com Checkboxes */
+.multiselect-dropdown {
+    position: relative;
+    width: 100%;
+    font-size: 0.82rem;
+    user-select: none;
+}
+
+.multiselect-trigger {
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--white);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.multiselect-trigger::after {
+    content: '▾';
+    font-size: 0.75rem;
+    color: var(--text-light);
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
+.multiselect-dropdown.open .multiselect-trigger {
+    border-color: var(--primary-color);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.multiselect-options {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: var(--white);
+    border: 1px solid var(--primary-color);
+    border-top: none;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.multiselect-dropdown.open .multiselect-options {
+    display: block;
+}
+
+.multiselect-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 0.8rem;
+}
+
+.multiselect-option:hover {
+    background: var(--primary-light);
+}
+
+.multiselect-option input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: #8b0000;
+    flex-shrink: 0;
+}
+
+.multiselect-option.all-option {
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--primary-dark);
+}
+
 .group-options {
     display: flex;
     flex-direction: column;

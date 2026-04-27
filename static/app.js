@@ -215,10 +215,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Estado da Tabela
     let currentSortColumn = null;
     let currentSortDirection = 1;
-    let currentFilters = {};
+    let currentFilters = {};          // Filtros de texto (colunas da tabela)
+    let currentMultiFilters = {};     // AJ20: Filtros multi-seleção (sidebar) — campo → Set
     let currentGrouping = 'none';
 
-    // AJ05: Sidebar events
+    // Sidebar: Agrupamento
     document.querySelectorAll('input[name="groupCards"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
             currentGrouping = e.target.value;
@@ -226,14 +227,105 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    ['filterAnalistaClienteCards', 'filterAnalistaInternoCards', 'filterSituacaoAtualCards'].forEach(id => {
-        const el = document.getElementById(id);
-        el.addEventListener('change', (e) => {
-            const field = id.replace('filter', '').replace('Cards', '');
-            const fieldKey = 'aten' + field;
-            window.filterBy(fieldKey, e.target.value);
+    // AJ20: Inicializa os dropdowns multi-select da sidebar
+    function initMultiselects() {
+        document.querySelectorAll('.multiselect-dropdown').forEach(dropdown => {
+            const trigger = dropdown.querySelector('.multiselect-trigger');
+
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Fecha todos os outros antes de abrir
+                document.querySelectorAll('.multiselect-dropdown.open').forEach(d => {
+                    if (d !== dropdown) d.classList.remove('open');
+                });
+                dropdown.classList.toggle('open');
+            });
         });
-    });
+
+        // Fecha ao clicar fora
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.multiselect-dropdown.open').forEach(d => d.classList.remove('open'));
+        });
+    }
+
+    // AJ20: Constrói a lista de opções de um multi-select
+    function buildMultiselectOptions(dropdown, values) {
+        const field = dropdown.dataset.field;
+        const optionsContainer = dropdown.querySelector('.multiselect-options');
+        const selectedSet = currentMultiFilters[field] || new Set();
+
+        const allChecked = selectedSet.size === 0; // size 0 = todos selecionados
+
+        let html = `<label class="multiselect-option all-option">
+            <input type="checkbox" data-value="__all__" ${allChecked ? 'checked' : ''}> Todos
+        </label>`;
+
+        values.forEach(v => {
+            const checked = allChecked || selectedSet.has(v);
+            html += `<label class="multiselect-option">
+                <input type="checkbox" data-value="${v}" ${checked ? 'checked' : ''}> ${v}
+            </label>`;
+        });
+
+        optionsContainer.innerHTML = html;
+
+        // Eventos nos checkboxes
+        optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                e.stopPropagation();
+                handleMultiselectChange(e, dropdown, field, values);
+            });
+        });
+
+        updateMultiselectTrigger(dropdown, field);
+    }
+
+    // AJ20: Processa mudança num checkbox do multi-select
+    function handleMultiselectChange(e, dropdown, field, allValues) {
+        const optionsContainer = dropdown.querySelector('.multiselect-options');
+        const allCb = optionsContainer.querySelector('input[data-value="__all__"]');
+        const itemCbs = [...optionsContainer.querySelectorAll('input:not([data-value="__all__"])')];
+
+        if (e.target.dataset.value === '__all__') {
+            // Clicou em "Todos": marca/desmarca tudo
+            const checked = allCb.checked;
+            itemCbs.forEach(cb => cb.checked = checked);
+            currentMultiFilters[field] = checked ? new Set() : new Set(['__NONE__']);
+        } else {
+            // Clicou num item individual
+            const selectedValues = itemCbs.filter(cb => cb.checked).map(cb => cb.dataset.value);
+            if (selectedValues.length === allValues.length) {
+                // Todos individuais marcados → equivale a "Todos"
+                currentMultiFilters[field] = new Set();
+                allCb.checked = true;
+            } else if (selectedValues.length === 0) {
+                // Nenhum marcado → trata como nenhum
+                currentMultiFilters[field] = new Set(['__NONE__']);
+                allCb.checked = false;
+            } else {
+                currentMultiFilters[field] = new Set(selectedValues);
+                allCb.checked = false;
+            }
+        }
+
+        updateMultiselectTrigger(dropdown, field);
+        renderAtendimentos(currentData);
+    }
+
+    // AJ20: Atualiza o texto exibido no botão trigger
+    function updateMultiselectTrigger(dropdown, field) {
+        const trigger = dropdown.querySelector('.multiselect-trigger');
+        const selectedSet = currentMultiFilters[field];
+        if (!selectedSet || selectedSet.size === 0) {
+            trigger.textContent = 'Todos';
+        } else if (selectedSet.has('__NONE__')) {
+            trigger.textContent = '(Nenhum)';
+        } else {
+            trigger.textContent = [...selectedSet].join(', ');
+        }
+    }
+
+    initMultiselects();
 
     window.sortBy = function (col) {
         if (currentSortColumn === col) {
@@ -249,9 +341,6 @@ document.addEventListener('DOMContentLoaded', () => {
         currentFilters[col] = val.toLowerCase();
         renderAtendimentos(currentData);
 
-        // Update both list and card filters UI
-        updateFilterUI(col, val);
-
         // Retomar foco apenas se for input (para filtros de texto)
         const newInput = document.querySelector(`th input[onkeyup*="'${col}'"]`);
         if (newInput) {
@@ -262,25 +351,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.clearFilters = function () {
         currentFilters = {};
-        // Reset UI inputs
+        currentMultiFilters = {}; // AJ20: Reseta multi-selects
+        // Reset text filter inputs na tabela
         document.querySelectorAll('.table-filter').forEach(el => el.value = '');
-        document.querySelectorAll('.filter-select').forEach(el => el.value = '');
+        // Rebuild multi-select UI
+        document.querySelectorAll('.multiselect-dropdown').forEach(dropdown => {
+            const field = dropdown.dataset.field;
+            const values = [...new Set(currentData.map(item => item[field]).filter(Boolean))].sort();
+            buildMultiselectOptions(dropdown, values);
+        });
         renderAtendimentos(currentData);
     };
-
-    function updateFilterUI(col, val) {
-        // List UI
-        const listSelect = document.querySelector(`th select[onchange*="'${col}'"]`);
-        if (listSelect) listSelect.value = val;
-
-        const listInput = document.querySelector(`th input[onkeyup*="'${col}'"]`);
-        if (listInput) listInput.value = val;
-
-        // Cards Sidebar UI
-        const sidebarId = 'filter' + col.replace('aten', '') + 'Cards';
-        const sidebarSelect = document.getElementById(sidebarId);
-        if (sidebarSelect) sidebarSelect.value = val;
-    }
 
     function updateFooterStats(data) {
         const total = data.length;
@@ -321,19 +402,16 @@ document.addEventListener('DOMContentLoaded', () => {
             `).join('') || '<div class="summary-item">Nenhum registro</div>';
     }
 
+    // AJ20: Popula os multi-selects da sidebar com os valores únicos dos dados
     function populateFilterSelects(data) {
         const fields = ['atenAnalistaCliente', 'atenAnalistaInterno', 'atenSituacaoAtual'];
-        fields.forEach(field => {
-            const uniqueValues = [...new Set(data.map(item => item[field]).filter(Boolean))].sort();
+        const dropdownIds = ['msAnalistaCliente', 'msAnalistaInterno', 'msSituacaoAtual'];
 
-            // Sidebar selects
-            const sidebarId = 'filter' + field.replace('aten', '') + 'Cards';
-            const sidebarSelect = document.getElementById(sidebarId);
-            if (sidebarSelect) {
-                const currentVal = sidebarSelect.value;
-                sidebarSelect.innerHTML = '<option value="">Todos</option>' +
-                    uniqueValues.map(v => `<option value="${v}">${v}</option>`).join('');
-                sidebarSelect.value = currentVal;
+        fields.forEach((field, i) => {
+            const uniqueValues = [...new Set(data.map(item => item[field]).filter(Boolean))].sort();
+            const dropdown = document.getElementById(dropdownIds[i]);
+            if (dropdown) {
+                buildMultiselectOptions(dropdown, uniqueValues);
             }
         });
     }
@@ -342,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
         atendimentosList.innerHTML = '';
 
         let processedData = data.filter(item => {
+            // Filtros de texto (colunas da tabela)
             for (let col in currentFilters) {
                 if (currentFilters[col]) {
                     let val = item[col] || '';
@@ -353,15 +432,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
+            // AJ20: Filtros multi-seleção (sidebar)
+            for (let col in currentMultiFilters) {
+                const selectedSet = currentMultiFilters[col];
+                if (selectedSet && selectedSet.size > 0) {
+                    const val = item[col] || '';
+                    if (!selectedSet.has(val)) return false;
+                }
+            }
             return true;
         });
 
+        // Ordenação do usuário (clique em coluna)
         if (currentSortColumn) {
             processedData.sort((a, b) => {
                 let valA = a[currentSortColumn] || '';
                 let valB = b[currentSortColumn] || '';
                 if (valA < valB) return -1 * currentSortDirection;
                 if (valA > valB) return 1 * currentSortDirection;
+                return 0;
+            });
+        }
+
+        // Agrupamento: garante que itens do mesmo grupo fiquem juntos
+        // Se o usuário já ordenou pela coluna de agrupamento, mantém essa ordem.
+        // Caso contrário, faz uma ordenação primária pelo campo de grupo.
+        if (currentGrouping !== 'none' && currentSortColumn !== currentGrouping) {
+            processedData.sort((a, b) => {
+                const valA = a[currentGrouping] || '';
+                const valB = b[currentGrouping] || '';
+                if (valA < valB) return -1;
+                if (valA > valB) return 1;
                 return 0;
             });
         }
