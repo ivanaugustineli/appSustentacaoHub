@@ -43,7 +43,17 @@ Após a inicialização dos contêineres, abra o navegador em:
 - **Formato Flexível de Datas**: Você pode copiar e colar datas livremente nos campos de data (ex: `15/04/2026 14:30` ou formatos ISO). O sistema valida e normatiza a entrada automaticamente antes de enviar ao servidor.
 - **Edição**: Clique no título ou cabeçalho azul de um card existente para editar suas informações.
 
-### 4. Estrutura de Persistência
+### 4. Importação de Dados
+
+A aplicação permite a importação em massa de atendimentos através de arquivos `.csv`. 
+Clique no botão **Importar** no topo da tela e siga os passos:
+1. **Selecionar Layout**: Escolha entre Incidentes (INC), Problemas (PRB), Solicitações (RITM) do ServiceNow ou o layout Geral do AzureDevOps.
+2. **Upload**: Selecione o arquivo CSV correspondente ao layout escolhido.
+3. **Deduplicação**: O sistema utiliza a combinação de **Número Primário + Número Secundário** como chave única.
+    - Se o registro não existir: Ele será **inserido**.
+    - Se o registro já existir: O sistema compara os dados. Se houver qualquer diferença, o registro será **atualizado**. Caso contrário, será ignorado.
+
+### 5. Estrutura de Persistência
 
 Os dados inseridos são persistidos de forma segura no arquivo `data/atendimentos.db` no seu host local (graças ao mapeamento de volume do Docker Compose). Se você precisar fazer backup ou inspecionar o banco diretamente, basta acessar este diretório.
 
