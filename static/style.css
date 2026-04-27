@@ -29,6 +29,10 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     line-height: 1.6;
+    height: 100vh;           /* AJ17.1: Altura total da tela */
+    display: flex;           /* AJ17.1: Layout flexível */
+    flex-direction: column;  /* AJ17.1: Header em cima, resto embaixo */
+    overflow: hidden;        /* AJ17.1: Remove barra de rolagem externa */
 }
 
 .app-header {
@@ -126,14 +130,21 @@ body {
 }
 
 .container {
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 0 1rem;
+    max-width: 100%;
+    margin: 0.5rem auto; /* AJ16: Espaço reduzido entre título e lista */
+    padding: 0 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    flex: 1;                 /* AJ17.1: Ocupa o espaço restante */
+    overflow: hidden;        /* AJ17.1: Impede que a container pai role */
 }
 
 .atendimentos-table-container {
     width: 100%;
+    height: 100%;    /* AJ17.1: Ocupa toda altura disponível no container */
     overflow-x: auto;
+    overflow-y: auto; /* AJ17: Habilita rolagem vertical na lista */
     background: var(--white);
     border-radius: 8px;
     box-shadow: var(--shadow);
@@ -153,12 +164,22 @@ body {
 
 .data-table th,
 .data-table td {
-    padding: 0.2rem 0.6rem; /* AJ07: Altura reduzida nas linhas */
+    padding: 0.2rem 0.6rem;
+    /* AJ07: Altura reduzida nas linhas */
     border-bottom: 1px solid var(--border-color);
-    border-right: 1px solid var(--border-color); /* AJ06: Divisória discreta nas linhas de dados */
+    border-right: 1px solid var(--border-color);
+    /* AJ06: Divisória discreta nas linhas de dados */
     white-space: nowrap;
-    overflow: hidden; /* AJ09: Impede que o texto vaze ou seja sobreposto de forma errada */
-    text-overflow: clip; /* AJ09: Corta o texto sem usar reticências (...) */
+    overflow: hidden;
+    /* AJ09: Impede que o texto vaze ou seja sobreposto de forma errada */
+    text-overflow: clip;
+    /* AJ09: Corta o texto sem usar reticências (...) */
+}
+
+.data-table th:last-child,
+.data-table td:last-child {
+    border-right: none;
+    /* AJ13: Remove divisória da última coluna */
 }
 
 .data-table th {
@@ -167,7 +188,9 @@ body {
     font-weight: 600;
     border-right: 1px solid var(--border-color);
     /* AJ01: Divisória discreta */
-    position: relative;
+    position: sticky; /* AJ17: Cabeçalho fixo */
+    top: 0;           /* AJ17: Cabeçalho fixo */
+    z-index: 10;      /* AJ17: Garante que fique sobre os dados */
 }
 
 .resizer {
@@ -194,13 +217,12 @@ body {
     background-color: #f7fafc;
 }
 
-.container {
-    max-width: 100%;
-    padding: 0 0.5rem;
-    display: flex;
-    gap: 0.5rem;
-    align-items: flex-start;
+.data-table input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: #8b0000; /* AJ15: Checkbox em vermelho escuro quando marcado */
 }
+
+
 
 .sort-icon {
     font-size: 0.8em;
@@ -460,17 +482,17 @@ body {
 .sidebar-filtros {
     width: 220px;
     background: var(--white);
-    padding: 0.5rem;
+    padding: 0.6rem;         /* AJ18: Ajuste de padding para alinhar com o header da tabela */
     border-radius: 8px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border-color);
     flex-shrink: 0;
-    position: sticky;
-    top: 65px;
+    margin: 0;               /* AJ18: Remove qualquer margem que cause desalinhamento */
 }
 
 .sidebar-filtros h3 {
     font-size: 1rem;
+    margin-top: 0;           /* AJ18: Alinha com o topo do container */
     margin-bottom: 0.5rem;
     color: var(--text-color);
     border-bottom: 1px solid var(--border-color);
@@ -507,6 +529,91 @@ body {
     font-size: 0.85rem;
 }
 
+/* AJ20: Componente Multi-Select com Checkboxes */
+.multiselect-dropdown {
+    position: relative;
+    width: 100%;
+    font-size: 0.82rem;
+    user-select: none;
+}
+
+.multiselect-trigger {
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--white);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.multiselect-trigger::after {
+    content: '▾';
+    font-size: 0.75rem;
+    color: var(--text-light);
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
+.multiselect-dropdown.open .multiselect-trigger {
+    border-color: var(--primary-color);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.multiselect-options {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: var(--white);
+    border: 1px solid var(--primary-color);
+    border-top: none;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.multiselect-dropdown.open .multiselect-options {
+    display: block;
+}
+
+.multiselect-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 0.8rem;
+}
+
+.multiselect-option:hover {
+    background: var(--primary-light);
+}
+
+.multiselect-option input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: #8b0000;
+    flex-shrink: 0;
+}
+
+.multiselect-option.all-option {
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--primary-dark);
+}
+
 .group-options {
     display: flex;
     flex-direction: column;
@@ -525,7 +632,7 @@ body {
 .app-footer {
     background-color: var(--white);
     border-top: 2px solid var(--primary-color);
-    padding: 0.75rem 2rem;
+    padding: 0.3rem 2rem;   /* AJ19: Reduzido padding vertical */
     position: fixed;
     bottom: 0;
     width: 100%;
@@ -545,12 +652,12 @@ body {
 .footer-section {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.25rem;            /* AJ19: Reduzido gap interno */
 }
 
 .footer-header {
-    font-size: 0.7rem;
-    font-weight: 800;
+    font-size: 0.65rem;      /* AJ19: Reduzido tamanho do fonte */
+    font-weight: 500;        /* AJ19: De bold para normal (500 é um peso médio limpo) */
     text-transform: uppercase;
     color: var(--text-light);
     letter-spacing: 0.05em;
@@ -565,8 +672,8 @@ body {
 }
 
 .summary-item {
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: 0.75rem;      /* AJ19: Reduzido tamanho do fonte */
+    font-weight: 400;        /* AJ19: De bold para normal */
     background: #edf2f7;
     padding: 2px 8px;
     border-radius: 4px;

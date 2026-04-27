@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const d = new Date(isoStr);
         if (isNaN(d.getTime())) return '';
         const pad = n => n.toString().padStart(2, '0');
-        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     }
 
     // Modal
@@ -215,10 +215,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Estado da Tabela
     let currentSortColumn = null;
     let currentSortDirection = 1;
-    let currentFilters = {};
+    let currentFilters = {};          // Filtros de texto (colunas da tabela)
+    let currentMultiFilters = {};     // AJ20: Filtros multi-seleção (sidebar) — campo → Set
     let currentGrouping = 'none';
 
-    // AJ05: Sidebar events
+    // Sidebar: Agrupamento
     document.querySelectorAll('input[name="groupCards"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
             currentGrouping = e.target.value;
@@ -226,14 +227,105 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    ['filterAnalistaClienteCards', 'filterAnalistaInternoCards', 'filterSituacaoAtualCards'].forEach(id => {
-        const el = document.getElementById(id);
-        el.addEventListener('change', (e) => {
-            const field = id.replace('filter', '').replace('Cards', '');
-            const fieldKey = 'aten' + field;
-            window.filterBy(fieldKey, e.target.value);
+    // AJ20: Inicializa os dropdowns multi-select da sidebar
+    function initMultiselects() {
+        document.querySelectorAll('.multiselect-dropdown').forEach(dropdown => {
+            const trigger = dropdown.querySelector('.multiselect-trigger');
+
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Fecha todos os outros antes de abrir
+                document.querySelectorAll('.multiselect-dropdown.open').forEach(d => {
+                    if (d !== dropdown) d.classList.remove('open');
+                });
+                dropdown.classList.toggle('open');
+            });
         });
-    });
+
+        // Fecha ao clicar fora
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.multiselect-dropdown.open').forEach(d => d.classList.remove('open'));
+        });
+    }
+
+    // AJ20: Constrói a lista de opções de um multi-select
+    function buildMultiselectOptions(dropdown, values) {
+        const field = dropdown.dataset.field;
+        const optionsContainer = dropdown.querySelector('.multiselect-options');
+        const selectedSet = currentMultiFilters[field] || new Set();
+
+        const allChecked = selectedSet.size === 0; // size 0 = todos selecionados
+
+        let html = `<label class="multiselect-option all-option">
+            <input type="checkbox" data-value="__all__" ${allChecked ? 'checked' : ''}> Todos
+        </label>`;
+
+        values.forEach(v => {
+            const checked = allChecked || selectedSet.has(v);
+            html += `<label class="multiselect-option">
+                <input type="checkbox" data-value="${v}" ${checked ? 'checked' : ''}> ${v}
+            </label>`;
+        });
+
+        optionsContainer.innerHTML = html;
+
+        // Eventos nos checkboxes
+        optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                e.stopPropagation();
+                handleMultiselectChange(e, dropdown, field, values);
+            });
+        });
+
+        updateMultiselectTrigger(dropdown, field);
+    }
+
+    // AJ20: Processa mudança num checkbox do multi-select
+    function handleMultiselectChange(e, dropdown, field, allValues) {
+        const optionsContainer = dropdown.querySelector('.multiselect-options');
+        const allCb = optionsContainer.querySelector('input[data-value="__all__"]');
+        const itemCbs = [...optionsContainer.querySelectorAll('input:not([data-value="__all__"])')];
+
+        if (e.target.dataset.value === '__all__') {
+            // Clicou em "Todos": marca/desmarca tudo
+            const checked = allCb.checked;
+            itemCbs.forEach(cb => cb.checked = checked);
+            currentMultiFilters[field] = checked ? new Set() : new Set(['__NONE__']);
+        } else {
+            // Clicou num item individual
+            const selectedValues = itemCbs.filter(cb => cb.checked).map(cb => cb.dataset.value);
+            if (selectedValues.length === allValues.length) {
+                // Todos individuais marcados → equivale a "Todos"
+                currentMultiFilters[field] = new Set();
+                allCb.checked = true;
+            } else if (selectedValues.length === 0) {
+                // Nenhum marcado → trata como nenhum
+                currentMultiFilters[field] = new Set(['__NONE__']);
+                allCb.checked = false;
+            } else {
+                currentMultiFilters[field] = new Set(selectedValues);
+                allCb.checked = false;
+            }
+        }
+
+        updateMultiselectTrigger(dropdown, field);
+        renderAtendimentos(currentData);
+    }
+
+    // AJ20: Atualiza o texto exibido no botão trigger
+    function updateMultiselectTrigger(dropdown, field) {
+        const trigger = dropdown.querySelector('.multiselect-trigger');
+        const selectedSet = currentMultiFilters[field];
+        if (!selectedSet || selectedSet.size === 0) {
+            trigger.textContent = 'Todos';
+        } else if (selectedSet.has('__NONE__')) {
+            trigger.textContent = '(Nenhum)';
+        } else {
+            trigger.textContent = [...selectedSet].join(', ');
+        }
+    }
+
+    initMultiselects();
 
     window.sortBy = function (col) {
         if (currentSortColumn === col) {
@@ -249,9 +341,6 @@ document.addEventListener('DOMContentLoaded', () => {
         currentFilters[col] = val.toLowerCase();
         renderAtendimentos(currentData);
 
-        // Update both list and card filters UI
-        updateFilterUI(col, val);
-
         // Retomar foco apenas se for input (para filtros de texto)
         const newInput = document.querySelector(`th input[onkeyup*="'${col}'"]`);
         if (newInput) {
@@ -262,25 +351,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.clearFilters = function () {
         currentFilters = {};
-        // Reset UI inputs
+        currentMultiFilters = {}; // AJ20: Reseta multi-selects
+        // Reset text filter inputs na tabela
         document.querySelectorAll('.table-filter').forEach(el => el.value = '');
-        document.querySelectorAll('.filter-select').forEach(el => el.value = '');
+        // Rebuild multi-select UI
+        document.querySelectorAll('.multiselect-dropdown').forEach(dropdown => {
+            const field = dropdown.dataset.field;
+            const values = [...new Set(currentData.map(item => item[field]).filter(Boolean))].sort();
+            buildMultiselectOptions(dropdown, values);
+        });
         renderAtendimentos(currentData);
     };
-
-    function updateFilterUI(col, val) {
-        // List UI
-        const listSelect = document.querySelector(`th select[onchange*="'${col}'"]`);
-        if (listSelect) listSelect.value = val;
-
-        const listInput = document.querySelector(`th input[onkeyup*="'${col}'"]`);
-        if (listInput) listInput.value = val;
-
-        // Cards Sidebar UI
-        const sidebarId = 'filter' + col.replace('aten', '') + 'Cards';
-        const sidebarSelect = document.getElementById(sidebarId);
-        if (sidebarSelect) sidebarSelect.value = val;
-    }
 
     function updateFooterStats(data) {
         const total = data.length;
@@ -321,19 +402,16 @@ document.addEventListener('DOMContentLoaded', () => {
             `).join('') || '<div class="summary-item">Nenhum registro</div>';
     }
 
+    // AJ20: Popula os multi-selects da sidebar com os valores únicos dos dados
     function populateFilterSelects(data) {
         const fields = ['atenAnalistaCliente', 'atenAnalistaInterno', 'atenSituacaoAtual'];
-        fields.forEach(field => {
-            const uniqueValues = [...new Set(data.map(item => item[field]).filter(Boolean))].sort();
+        const dropdownIds = ['msAnalistaCliente', 'msAnalistaInterno', 'msSituacaoAtual'];
 
-            // Sidebar selects
-            const sidebarId = 'filter' + field.replace('aten', '') + 'Cards';
-            const sidebarSelect = document.getElementById(sidebarId);
-            if (sidebarSelect) {
-                const currentVal = sidebarSelect.value;
-                sidebarSelect.innerHTML = '<option value="">Todos</option>' +
-                    uniqueValues.map(v => `<option value="${v}">${v}</option>`).join('');
-                sidebarSelect.value = currentVal;
+        fields.forEach((field, i) => {
+            const uniqueValues = [...new Set(data.map(item => item[field]).filter(Boolean))].sort();
+            const dropdown = document.getElementById(dropdownIds[i]);
+            if (dropdown) {
+                buildMultiselectOptions(dropdown, uniqueValues);
             }
         });
     }
@@ -342,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
         atendimentosList.innerHTML = '';
 
         let processedData = data.filter(item => {
+            // Filtros de texto (colunas da tabela)
             for (let col in currentFilters) {
                 if (currentFilters[col]) {
                     let val = item[col] || '';
@@ -353,15 +432,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
+            // AJ20: Filtros multi-seleção (sidebar)
+            for (let col in currentMultiFilters) {
+                const selectedSet = currentMultiFilters[col];
+                if (selectedSet && selectedSet.size > 0) {
+                    const val = item[col] || '';
+                    if (!selectedSet.has(val)) return false;
+                }
+            }
             return true;
         });
 
+        // Ordenação do usuário (clique em coluna)
         if (currentSortColumn) {
             processedData.sort((a, b) => {
                 let valA = a[currentSortColumn] || '';
                 let valB = b[currentSortColumn] || '';
                 if (valA < valB) return -1 * currentSortDirection;
                 if (valA > valB) return 1 * currentSortDirection;
+                return 0;
+            });
+        }
+
+        // Agrupamento: garante que itens do mesmo grupo fiquem juntos
+        // Se o usuário já ordenou pela coluna de agrupamento, mantém essa ordem.
+        // Caso contrário, faz uma ordenação primária pelo campo de grupo.
+        if (currentGrouping !== 'none' && currentSortColumn !== currentGrouping) {
+            processedData.sort((a, b) => {
+                const valA = a[currentGrouping] || '';
+                const valB = b[currentGrouping] || '';
+                if (valA < valB) return -1;
+                if (valA > valB) return 1;
                 return 0;
             });
         }
@@ -391,14 +492,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const groupingIcon = ['atenAnalistaCliente', 'atenAnalistaInterno', 'atenSituacaoAtual'].includes(col) ?
                 `<span class="group-toggle ${currentGrouping === col ? 'active' : ''}" onclick="event.stopPropagation(); window.toggleTableGrouping('${col}')" title="Agrupar por este campo">📁</span>` : '';
 
+            const resizerHTML = col !== 'atenSituacaoAtual' ? '<div class="resizer" onclick="event.stopPropagation()"></div>' : '';
+
             return `
-                    <th onclick="sortBy('${col}')" data-col="${col}" style="position: relative;">
+                    <th onclick="sortBy('${col}')" data-col="${col}">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span>${label} <span class="sort-icon ${active}">${arrow}</span></span>
                             ${groupingIcon}
                         </div>
                         ${filterHTML}
-                        <div class="resizer" onclick="event.stopPropagation()"></div>
+                        ${resizerHTML}
                     </th>
                 `;
         }
@@ -455,19 +558,57 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('bulkActionSelect').value = '';
         };
 
-        // AJ11: Salva larguras das colunas
-        function saveColumnWidths(table) {
+        // AJ12: Salva larguras das colunas no servidor (.SHconfig)
+        async function saveColumnWidths(table) {
             const widths = {};
             table.querySelectorAll("th").forEach((th, idx) => {
                 const colKey = th.dataset.col || `col_${idx}`;
                 widths[colKey] = th.style.width;
             });
-            localStorage.setItem('shub_column_widths', JSON.stringify(widths));
+            
+            try {
+                await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ column_widths: widths })
+                });
+            } catch (e) {
+                console.error("Erro ao salvar config global:", e);
+                // Fallback para localStorage em caso de erro no servidor
+                localStorage.setItem('shub_column_widths', JSON.stringify(widths));
+            }
         }
 
         // AJ01: Lógica de Resonamento de Colunas
-        function initResizing(table) {
+        async function initResizing(table) {
             const cols = table.querySelectorAll("th");
+            
+            // AJ12: Carrega larguras salvas do servidor
+            let savedWidths = {};
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                savedWidths = config.column_widths || {};
+            } catch (e) {
+                console.error("Erro ao carregar config global:", e);
+                savedWidths = JSON.parse(localStorage.getItem('shub_column_widths') || '{}');
+            }
+
+            if (Object.keys(savedWidths).length > 0) {
+                table.style.tableLayout = "fixed";
+                table.style.width = "100%";
+                cols.forEach((th, idx) => {
+                    const colKey = th.dataset.col || `col_${idx}`;
+                    if (savedWidths[colKey]) {
+                        th.style.width = savedWidths[colKey];
+                    }
+                });
+            } else {
+                // Se não houver salvas, mantém o layout fixo para permitir redimensionamento futuro
+                table.style.tableLayout = "fixed";
+                table.style.width = "100%";
+                cols.forEach(th => th.style.width = `${th.offsetWidth}px`);
+            }
             
             // AJ10: Calcula largura mínima baseada nos dados "no momento" antes de aplicar larguras fixas
             table.style.tableLayout = "auto";
@@ -489,22 +630,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (idPrimarioTh) idPrimarioTh.style.minWidth = `${minWidthPrimario}px`;
             if (idSecundarioTh) idSecundarioTh.style.minWidth = `${minWidthSecundario}px`;
 
-            // AJ11: Carrega larguras salvas
-            const savedWidths = JSON.parse(localStorage.getItem('shub_column_widths') || '{}');
+            // Reaplica as larguras fixas após medir as mínimas
+            table.style.tableLayout = "fixed";
             if (Object.keys(savedWidths).length > 0) {
-                table.style.tableLayout = "fixed";
-                table.style.width = "100%";
                 cols.forEach((th, idx) => {
                     const colKey = th.dataset.col || `col_${idx}`;
-                    if (savedWidths[colKey]) {
-                        th.style.width = savedWidths[colKey];
-                    }
+                    if (savedWidths[colKey]) th.style.width = savedWidths[colKey];
                 });
-            } else {
-                // Se não houver salvas, mantém o layout fixo para permitir redimensionamento futuro
-                table.style.tableLayout = "fixed";
-                table.style.width = "100%";
-                cols.forEach(th => th.style.width = `${th.offsetWidth}px`);
             }
 
             cols.forEach((col) => {
@@ -552,10 +684,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             lastCol.style.width = `${lastStartWidth - delta}px`;
                         };
 
-                    const onMouseUp = () => {
+                    const onMouseUp = async () => {
                         document.removeEventListener("mousemove", onMouseMove);
                         document.removeEventListener("mouseup", onMouseUp);
-                        saveColumnWidths(table); // AJ11
+                        await saveColumnWidths(table); // AJ12
                     };
 
                     document.addEventListener("mousemove", onMouseMove);
@@ -593,7 +725,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     col.style.width = `${contentWidth}px`;
                     lastCol.style.width = `${lastCurrentWidth - delta}px`;
                     
-                    saveColumnWidths(table); // AJ11
+                    saveColumnWidths(table); // AJ12
                 });
             });
         }
@@ -601,7 +733,7 @@ document.addEventListener('DOMContentLoaded', () => {
         table.innerHTML = `
                 <thead>
                     <tr>
-                        <th class="checkbox-col" style="position: relative; width: 50px; min-width: 50px; padding: 0.2rem; vertical-align: middle; border-right: 1px solid var(--border-color);">
+                        <th class="checkbox-col" style="width: 50px; min-width: 50px; padding: 0.2rem; vertical-align: middle; border-right: 1px solid var(--border-color);">
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
                                 <span style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-light);">Marca</span>
                                 <div style="position: relative; display: inline-block;">
@@ -617,7 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </th>
                         ${th('atenNumeroPrimario', 'Nº Primário')}
                         ${th('atenNumeroSecundario', 'Nº Secundário')}
-                        <th onclick="sortBy('atenTitulo')" style="position: relative; min-width: 160px;">
+                        <th onclick="sortBy('atenTitulo')" style="min-width: 160px;">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span>Título <span class="sort-icon ${currentSortColumn === 'atenTitulo' ? 'active' : ''}">${currentSortColumn === 'atenTitulo' && currentSortDirection === -1 ? '↓' : '↑'}</span></span>
                             </div>
@@ -666,7 +798,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.appendChild(tr);
         });
         atendimentosList.appendChild(table);
-        initResizing(table);
+        initResizing(table); // Mantendo initResizing como async, mas chamando sem await imediato (ou mudando renderAtendimentos para async)
 
         // Final updates
         updateFooterStats(processedData);
