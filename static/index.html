@@ -16,6 +16,10 @@
             <div class="app-subtitle">Gerenciador de Atendimentos de Sustentação</div>
         </div>
         <div class="header-actions">
+            <button id="btnImportar" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Importar
+            </button>
             <button id="btnNovoAtendimento" class="btn btn-primary">+ Novo Atendimento</button>
         </div>
     </header>
@@ -258,10 +262,135 @@
                 </div>
 
                 <div class="form-actions">
+                    <button type="button" class="btn btn-danger hidden" id="btnDelete">Excluir</button>
+                    <div style="flex: 1"></div>
                     <button type="button" class="btn btn-secondary" id="btnCancel">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Salvar Atendimento</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Importação -->
+    <div id="modalImport" class="modal">
+        <div class="modal-content import-modal-content">
+            <span class="close-btn" id="btnCloseImportModal">&times;</span>
+            <h2>Importar Dados</h2>
+            
+            <!-- Step 1: Seleção de Layout -->
+            <div id="importStep1" class="import-step">
+                <p>Selecione o tipo de arquivo que deseja importar:</p>
+                <div class="layout-grid">
+                    <div class="layout-option" data-layout="INC">
+                        <div class="layout-icon">INC</div>
+                        <span>Incidentes (ServiceNow)</span>
+                    </div>
+                    <div class="layout-option" data-layout="PRB">
+                        <div class="layout-icon">PRB</div>
+                        <span>Problemas (ServiceNow)</span>
+                    </div>
+                    <div class="layout-option" data-layout="RITM">
+                        <div class="layout-icon">RITM</div>
+                        <span>Solicitações (ServiceNow)</span>
+                    </div>
+                    <div class="layout-option" data-layout="Geral">
+                        <div class="layout-icon">GER</div>
+                        <span>Geral (AzureDevOps)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Upload de Arquivo -->
+            <div id="importStep2" class="import-step hidden">
+                <p>Selecione o arquivo .csv para o layout <strong id="selectedLayoutName"></strong>:</p>
+                <div class="upload-area" id="uploadArea">
+                    <input type="file" id="importFileInput" accept=".csv" class="hidden">
+                    <div class="upload-placeholder">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <p>Arraste o arquivo aqui ou clique para selecionar</p>
+                    </div>
+                    <div class="file-info hidden" id="fileInfo">
+                        <span class="file-name" id="fileName"></span>
+                        <span class="file-size" id="fileSize"></span>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-secondary" id="btnBackToLayout">Voltar</button>
+                    <button class="btn btn-primary disabled" id="btnConfirmFile" disabled>Confirmar Arquivo</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Confirmação -->
+            <div id="importStep3" class="import-step hidden">
+                <p>Deseja iniciar a importação do arquivo <strong id="confirmFileName"></strong>?</p>
+                <div class="info-alert">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    <span>O sistema irá identificar registros existentes e atualizá-los se houver mudanças.</span>
+                </div>
+                <div id="ignoreFinalizedContainer" class="form-group checkbox-group hidden" style="margin: 15px 0; display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="chkIgnoreFinalized" style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="chkIgnoreFinalized" style="cursor: pointer; font-weight: 500;">Ignorar Atendimentos Finalizados</label>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-secondary" id="btnCancelImport">Cancelar</button>
+                    <button class="btn btn-primary" id="btnStartImport">Iniciar Importação</button>
+                </div>
+            </div>
+
+            <!-- Step 4: Progresso -->
+            <div id="importStep4" class="import-step hidden">
+                <p>Processando importação...</p>
+                <div class="progress-container">
+                    <div class="progress-bar-bg">
+                        <div id="importProgressBar" class="progress-bar-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: Resultado -->
+            <div id="importStep5" class="import-step hidden">
+                <div class="result-summary">
+                    <div class="result-item">
+                        <span class="result-label">Inseridos</span>
+                        <span class="result-value success" id="resInseridos">0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Atualizados</span>
+                        <span class="result-value info" id="resAtualizados">0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Ignorados</span>
+                        <span class="result-value gray" id="resIgnorados">0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Erros</span>
+                        <span class="result-value danger" id="resErros">0</span>
+                    </div>
+                </div>
+                
+                <div id="errorListContainer" class="error-list-container hidden">
+                    <h4>Detalhes dos Erros:</h4>
+                    <ul id="importErrorList" class="error-list"></ul>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary" id="btnCloseResult">Finalizar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Custom (Alert/Confirm) -->
+    <div id="modalCustom" class="modal">
+        <div class="modal-content custom-dialog">
+            <h3 id="customModalTitle">SustentaçãoHub</h3>
+            <div class="custom-modal-body">
+                <p id="customModalMessage"></p>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="btnCustomCancel">Cancelar</button>
+                <button class="btn btn-primary" id="btnCustomOk">OK</button>
+            </div>
         </div>
     </div>
 
