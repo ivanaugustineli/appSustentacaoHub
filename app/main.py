@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List, Optional
@@ -13,6 +14,14 @@ from app.database import init_db, get_db
 from app.models import Atendimento, AtendimentoCreate, AtendimentoUpdate, AtendimentoResponse
 
 app = FastAPI(title="Gerenciador de Atendimentos")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.on_event("startup")
 async def on_startup():
@@ -66,7 +75,7 @@ async def delete_atendimento(atendimento_id: int, db: AsyncSession = Depends(get
     return {"detail": "Atendimento excluído com sucesso"}
 
 # AJ12: Gerenciamento de Configuração Global (.SHconfig)
-CONFIG_FILE = "data/.SHconfig"
+CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", ".SHconfig")
 
 @app.get("/config")
 async def get_config():
@@ -180,7 +189,7 @@ async def importar_atendimentos(
                 data["atenAnalistaCliente"] = row.get("assigned_to")
                 data["atenDescricao"] = row.get("cmdb_ci")
                 data["atenPrioridade"] = extract_priority(row.get("priority"))
-                data["atenTipo"] = "RITM" if "RITM" in (num or "") else "SCTASK"
+                data["atenTipo"] = "RITM" if num and num.startswith("RITM") else "SCTASK"
                 
             elif layout == "Geral":
                 title = row.get("Title", "")
@@ -188,7 +197,7 @@ async def importar_atendimentos(
                 primary = ""
                 secondary = ""
                 for n in nums:
-                    if n.startswith(("INC", "PRB", "RITM")):
+                    if n.startswith("INC") or n.startswith("PRB") or n.startswith("RITM"):
                         primary = n
                     elif n.startswith("SCTASK"):
                         secondary = n
@@ -240,12 +249,24 @@ async def importar_atendimentos(
             else:
                 has_diff = False
                 for key, val in data.items():
+                    if val is None:
+                        continue
                     current_val = getattr(existing, key)
-                    if isinstance(val, datetime) and isinstance(current_val, datetime):
+                    if val is None and current_val is not None:
+                        has_diff = True
+                        setattr(existing, key, val)
+                    elif val is not None and current_val is None:
+                        has_diff = True
+                        setattr(existing, key, val)
+                    elif isinstance(val, datetime) and isinstance(current_val, datetime):
                         if val.replace(microsecond=0) != current_val.replace(microsecond=0):
                             has_diff = True
                             setattr(existing, key, val)
-                    elif str(val) != str(current_val) and val is not None:
+                    elif isinstance(val, (int, float)) and isinstance(current_val, (int, float)):
+                        if val != current_val:
+                            has_diff = True
+                            setattr(existing, key, val)
+                    elif val != current_val:
                         has_diff = True
                         setattr(existing, key, val)
                 
