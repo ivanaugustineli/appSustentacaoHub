@@ -5,6 +5,8 @@ from typing import List, Optional
 import csv
 import io
 import re
+import json
+import os
 from datetime import datetime
 
 from app.database import init_db, get_db
@@ -63,12 +65,36 @@ async def delete_atendimento(atendimento_id: int, db: AsyncSession = Depends(get
     await db.commit()
     return {"detail": "Atendimento excluído com sucesso"}
 
+# AJ12: Gerenciamento de Configuração Global (.SHconfig)
+CONFIG_FILE = "data/.SHconfig"
+
+@app.get("/config")
+async def get_config():
+    if not os.path.exists(CONFIG_FILE):
+        return {}
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Erro ao ler config: {e}")
+        return {}
+
+@app.post("/config")
+async def save_config(config: dict):
+    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+    try:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=4, ensure_ascii=False)
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao salvar config: {e}")
+
 def parse_date(date_str):
     if not date_str or date_str.strip() == "":
         return None
     # Limpar possíveis aspas ou espaços extras
     date_str = date_str.strip().replace('"', '')
-    formats = ["%d/%m/%Y %H:%M", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y", "%Y-%m-%d", "%m/%d/%Y %H:%M:%S", "%m/%d/%Y %I:%M:%S %p"]
+    formats = ["%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y", "%Y-%m-%d", "%m/%d/%Y %H:%M:%S", "%m/%d/%Y %I:%M:%S %p"]
     for fmt in formats:
         try:
             return datetime.strptime(date_str, fmt)
@@ -113,6 +139,9 @@ async def importar_atendimentos(
     
     for i, row in enumerate(reader, start=1):
         try:
+            # AJ14: Limpa espaços em branco dos nomes das colunas
+            row = {k.strip(): v for k, v in row.items() if k is not None}
+            
             data = {}
             # ... (mapping logic remains the same)
             # Para economizar espaço, vou assumir que o bloco de layout está correto e focar no try/except
@@ -170,7 +199,10 @@ async def importar_atendimentos(
                 for n in nums:
                     clean_title = clean_title.replace(f"{n} - ", "").replace(n, "")
                 data["atenTitulo"] = clean_title.strip()
-                data["atenDataAbertura"] = parse_date(row.get("Data de Abertura"))
+                data_abertura = parse_date(row.get("Data de Abertura"))
+                #data["atenDataAbertura"] = data_abertura // Mantem a data de abertura dos arquivos do ServiceNow.
+                data["atenDataRecepcao"] = data_abertura
+                
                 # RA11: Pegar apenas a informação a partir da esquerda antes de " <"
                 assigned_to = row.get("Assigned To", "")
                 data["atenAnalistaInterno"] = assigned_to.split(" <")[0].strip() if assigned_to else None

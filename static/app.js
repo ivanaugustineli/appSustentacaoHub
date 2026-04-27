@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const d = new Date(isoStr);
         if (isNaN(d.getTime())) return '';
         const pad = n => n.toString().padStart(2, '0');
-        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     }
 
     // Modal
@@ -391,14 +391,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const groupingIcon = ['atenAnalistaCliente', 'atenAnalistaInterno', 'atenSituacaoAtual'].includes(col) ?
                 `<span class="group-toggle ${currentGrouping === col ? 'active' : ''}" onclick="event.stopPropagation(); window.toggleTableGrouping('${col}')" title="Agrupar por este campo">📁</span>` : '';
 
+            const resizerHTML = col !== 'atenSituacaoAtual' ? '<div class="resizer" onclick="event.stopPropagation()"></div>' : '';
+
             return `
-                    <th onclick="sortBy('${col}')" data-col="${col}" style="position: relative;">
+                    <th onclick="sortBy('${col}')" data-col="${col}">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span>${label} <span class="sort-icon ${active}">${arrow}</span></span>
                             ${groupingIcon}
                         </div>
                         ${filterHTML}
-                        <div class="resizer" onclick="event.stopPropagation()"></div>
+                        ${resizerHTML}
                     </th>
                 `;
         }
@@ -455,19 +457,57 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('bulkActionSelect').value = '';
         };
 
-        // AJ11: Salva larguras das colunas
-        function saveColumnWidths(table) {
+        // AJ12: Salva larguras das colunas no servidor (.SHconfig)
+        async function saveColumnWidths(table) {
             const widths = {};
             table.querySelectorAll("th").forEach((th, idx) => {
                 const colKey = th.dataset.col || `col_${idx}`;
                 widths[colKey] = th.style.width;
             });
-            localStorage.setItem('shub_column_widths', JSON.stringify(widths));
+            
+            try {
+                await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ column_widths: widths })
+                });
+            } catch (e) {
+                console.error("Erro ao salvar config global:", e);
+                // Fallback para localStorage em caso de erro no servidor
+                localStorage.setItem('shub_column_widths', JSON.stringify(widths));
+            }
         }
 
         // AJ01: Lógica de Resonamento de Colunas
-        function initResizing(table) {
+        async function initResizing(table) {
             const cols = table.querySelectorAll("th");
+            
+            // AJ12: Carrega larguras salvas do servidor
+            let savedWidths = {};
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                savedWidths = config.column_widths || {};
+            } catch (e) {
+                console.error("Erro ao carregar config global:", e);
+                savedWidths = JSON.parse(localStorage.getItem('shub_column_widths') || '{}');
+            }
+
+            if (Object.keys(savedWidths).length > 0) {
+                table.style.tableLayout = "fixed";
+                table.style.width = "100%";
+                cols.forEach((th, idx) => {
+                    const colKey = th.dataset.col || `col_${idx}`;
+                    if (savedWidths[colKey]) {
+                        th.style.width = savedWidths[colKey];
+                    }
+                });
+            } else {
+                // Se não houver salvas, mantém o layout fixo para permitir redimensionamento futuro
+                table.style.tableLayout = "fixed";
+                table.style.width = "100%";
+                cols.forEach(th => th.style.width = `${th.offsetWidth}px`);
+            }
             
             // AJ10: Calcula largura mínima baseada nos dados "no momento" antes de aplicar larguras fixas
             table.style.tableLayout = "auto";
@@ -489,22 +529,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (idPrimarioTh) idPrimarioTh.style.minWidth = `${minWidthPrimario}px`;
             if (idSecundarioTh) idSecundarioTh.style.minWidth = `${minWidthSecundario}px`;
 
-            // AJ11: Carrega larguras salvas
-            const savedWidths = JSON.parse(localStorage.getItem('shub_column_widths') || '{}');
+            // Reaplica as larguras fixas após medir as mínimas
+            table.style.tableLayout = "fixed";
             if (Object.keys(savedWidths).length > 0) {
-                table.style.tableLayout = "fixed";
-                table.style.width = "100%";
                 cols.forEach((th, idx) => {
                     const colKey = th.dataset.col || `col_${idx}`;
-                    if (savedWidths[colKey]) {
-                        th.style.width = savedWidths[colKey];
-                    }
+                    if (savedWidths[colKey]) th.style.width = savedWidths[colKey];
                 });
-            } else {
-                // Se não houver salvas, mantém o layout fixo para permitir redimensionamento futuro
-                table.style.tableLayout = "fixed";
-                table.style.width = "100%";
-                cols.forEach(th => th.style.width = `${th.offsetWidth}px`);
             }
 
             cols.forEach((col) => {
@@ -552,10 +583,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             lastCol.style.width = `${lastStartWidth - delta}px`;
                         };
 
-                    const onMouseUp = () => {
+                    const onMouseUp = async () => {
                         document.removeEventListener("mousemove", onMouseMove);
                         document.removeEventListener("mouseup", onMouseUp);
-                        saveColumnWidths(table); // AJ11
+                        await saveColumnWidths(table); // AJ12
                     };
 
                     document.addEventListener("mousemove", onMouseMove);
@@ -593,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     col.style.width = `${contentWidth}px`;
                     lastCol.style.width = `${lastCurrentWidth - delta}px`;
                     
-                    saveColumnWidths(table); // AJ11
+                    saveColumnWidths(table); // AJ12
                 });
             });
         }
@@ -601,7 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
         table.innerHTML = `
                 <thead>
                     <tr>
-                        <th class="checkbox-col" style="position: relative; width: 50px; min-width: 50px; padding: 0.2rem; vertical-align: middle; border-right: 1px solid var(--border-color);">
+                        <th class="checkbox-col" style="width: 50px; min-width: 50px; padding: 0.2rem; vertical-align: middle; border-right: 1px solid var(--border-color);">
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
                                 <span style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-light);">Marca</span>
                                 <div style="position: relative; display: inline-block;">
@@ -617,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </th>
                         ${th('atenNumeroPrimario', 'Nº Primário')}
                         ${th('atenNumeroSecundario', 'Nº Secundário')}
-                        <th onclick="sortBy('atenTitulo')" style="position: relative; min-width: 160px;">
+                        <th onclick="sortBy('atenTitulo')" style="min-width: 160px;">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span>Título <span class="sort-icon ${currentSortColumn === 'atenTitulo' ? 'active' : ''}">${currentSortColumn === 'atenTitulo' && currentSortDirection === -1 ? '↓' : '↑'}</span></span>
                             </div>
@@ -666,7 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.appendChild(tr);
         });
         atendimentosList.appendChild(table);
-        initResizing(table);
+        initResizing(table); // Mantendo initResizing como async, mas chamando sem await imediato (ou mudando renderAtendimentos para async)
 
         // Final updates
         updateFooterStats(processedData);

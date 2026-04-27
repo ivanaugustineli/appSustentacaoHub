@@ -1,0 +1,13 @@
+{
+    "column_widths": {
+        "col_0": "50px",
+        "atenNumeroPrimario": "118px",
+        "atenNumeroSecundario": "138px",
+        "col_3": "362px",
+        "atenDataAbertura": "161px",
+        "atenDataRecepcao": "161px",
+        "atenAnalistaCliente": "273px",
+        "atenAnalistaInterno": "201px",
+        "atenSituacaoAtual": "198px"
+    }
+}
