@@ -16,9 +16,11 @@ async def get_db():
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        # Migração segura para o novo campo
         try:
             from sqlalchemy import text
-            await conn.execute(text('ALTER TABLE atendimentos ADD COLUMN "atenSituacaoAtual" VARCHAR'))
-        except Exception:
-            pass
+            result = await conn.execute(text("PRAGMA table_info(atendimentos)"))
+            columns = [row[1] for row in result.fetchall()]
+            if "atenSituacaoAtual" not in columns:
+                await conn.execute(text('ALTER TABLE atendimentos ADD COLUMN atenSituacaoAtual VARCHAR'))
+        except Exception as e:
+            print(f"Nota: migracao de coluna pode ja existir: {e}")

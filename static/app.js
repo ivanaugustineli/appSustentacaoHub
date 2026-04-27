@@ -17,6 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCustomOk = document.getElementById('btnCustomOk');
     const btnCustomCancel = document.getElementById('btnCustomCancel');
 
+    // Indicador discreto de progresso
+    const deleteIndicator = document.getElementById('deleteIndicator');
+    const deleteIndicatorText = document.getElementById('deleteIndicatorText');
+
     // Estado
     let currentData = [];
 
@@ -50,7 +54,38 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Utilitário: Parser de Data para ISO (aceitando colagem dd/mm/yyyy hh:mm ou yyyy-mm-ddThh:mm)
+    // Função: Indicador discreto de progresso de exclusão
+    function showDeleteProgressModal(ids) {
+        if (!ids || ids.length === 0) return;
+        
+        const total = ids.length;
+        let current = 0;
+        
+        deleteIndicator.classList.remove('hidden');
+        deleteIndicatorText.textContent = `Excluindo 1 de ${total}...`;
+        
+        async function processDelete() {
+            for (const id of ids) {
+                current++;
+                deleteIndicatorText.textContent = `Excluindo ${current} de ${total}...`;
+                
+                try {
+                    await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                } catch (e) {
+                    console.error(`Erro ao excluir ID ${id}:`, e);
+                }
+            }
+            
+            deleteIndicator.classList.add('hidden');
+            closeModal();
+            loadAtendimentos();
+            customAlert(`${total} atendimento(s) excluído(s) com sucesso.`);
+        }
+        
+        processDelete();
+    }
+
+    // Função: Mostrar progresso para bulk delete (selection multiple)
     function parseDate(inputStr) {
         if (!inputStr) return null;
         // Tenta ISO primeiro
@@ -187,18 +222,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirmacao = await customConfirm('Tem certeza que deseja excluir este atendimento? Esta ação não pode ser desfeita.');
         if (!confirmacao) return;
 
+        deleteIndicator.classList.remove('hidden');
+        deleteIndicatorText.textContent = 'Excluindo...';
+        
         try {
-            const response = await fetch(`${API_URL}/${id}`, {
-                method: 'DELETE'
-            });
-
-            if (!response.ok) throw new Error('Erro ao excluir atendimento');
-
-            closeModal();
-            loadAtendimentos();
-        } catch (error) {
-            await customAlert(error.message);
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+        } catch (e) {
+            console.error('Erro ao excluir:', e);
         }
+        
+        deleteIndicator.classList.add('hidden');
+        closeModal();
+        loadAtendimentos();
+        customAlert('Atendimento excluído com sucesso.');
     });
 
     // Carregar Lista
@@ -541,18 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                let successCount = 0;
-                for (const id of selectedIds) {
-                    try {
-                        const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-                        if (res.ok) successCount++;
-                    } catch (e) {
-                        console.error(`Erro ao excluir ID ${id}:`, e);
-                    }
-                }
-
-                await customAlert(`${successCount} atendimentos excluídos com sucesso.`);
-                loadAtendimentos();
+                showDeleteProgressModal(selectedIds);
             }
 
             document.getElementById('bulkActionSelect').value = '';

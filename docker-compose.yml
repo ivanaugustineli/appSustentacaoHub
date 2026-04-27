@@ -6,7 +6,7 @@ services:
     volumes:
       - ./data:/code/data
     environment:
-      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///data/atendimentos.db}
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///code/data/atendimentos.db}
     expose:
       - "8000"
 
