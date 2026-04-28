@@ -550,6 +550,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // AJ19: Funções de Checkbox e Ações em Massa
         window.toggleAllCheckboxes = function (checked) {
             document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = checked);
+            document.getElementById('selectAllCheckbox').checked = checked;
+        };
+
+        window.syncSelectAllState = function () {
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            const selectAll = document.getElementById('selectAllCheckbox');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            const noneChecked = Array.from(checkboxes).every(cb => !cb.checked);
+            selectAll.checked = allChecked;
+            selectAll.indeterminate = !allChecked && !noneChecked;
         };
 
         window.handleBulkAction = async function (action) {
@@ -562,8 +572,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (action === 'select_all') {
                 checkboxes.forEach(cb => cb.checked = true);
+                document.getElementById('selectAllCheckbox').checked = true;
+                document.getElementById('selectAllCheckbox').indeterminate = false;
             } else if (action === 'deselect_all') {
                 checkboxes.forEach(cb => cb.checked = false);
+                document.getElementById('selectAllCheckbox').checked = false;
+                document.getElementById('selectAllCheckbox').indeterminate = false;
             } else if (action === 'delete_selected') {
                 if (selectedIds.length === 0) {
                     await customAlert('Nenhum atendimento selecionado.');
@@ -758,19 +772,21 @@ document.addEventListener('DOMContentLoaded', () => {
         table.innerHTML = `
                 <thead>
                     <tr>
-                        <th class="checkbox-col" style="width: 50px; min-width: 50px; padding: 0.2rem; vertical-align: middle; border-right: 1px solid var(--border-color);">
+                        <th class="checkbox-col" style="width: 50px; min-width: 50px; padding: 0.15rem; vertical-align: middle; border-right: 1px solid var(--border-color);">
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                                <span style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-light);">Marca</span>
-                                <div style="position: relative; display: inline-block;">
-                                    <select id="bulkActionSelect" class="bulk-actions-select" style="width: 28px; height: 24px; padding: 0; appearance: none; -webkit-appearance: none; text-indent: -999px; cursor: pointer; background: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22m6 9 6 6 6-6%22/></svg>') no-repeat center; border: 1px solid var(--border-color); border-radius: 4px;" onchange="handleBulkAction(this.value)">
-                                        <option value="">...</option>
-                                        <option value="select_all">Marcar Todos</option>
-                                        <option value="deselect_all">Desmarcar Todos</option>
-                                        <option value="delete_selected">Excluir Selecionados</option>
-                                    </select>
+                                <span style="font-size: 0.6rem; font-weight: 800; text-transform: uppercase; color: var(--text-light);">Marca</span>
+                                <div style="display: flex; align-items: center; gap: 2px;">
+                                    <input type="checkbox" id="selectAllCheckbox" onclick="toggleAllCheckboxes(this.checked)" title="Marcar/Desmarcar Todos" style="cursor: pointer; width: 12px; height: 12px; margin: 0;">
+                                    <div style="position: relative; display: inline-block;">
+                                        <select id="bulkActionSelect" class="bulk-actions-select" style="width: 20px; height: 18px; padding: 0; appearance: none; -webkit-appearance: none; text-indent: -999px; cursor: pointer; background: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22m6 9 6 6 6-6%22/></svg>') no-repeat center; background-size: 12px; border: 1px solid var(--border-color); border-radius: 4px;" onchange="handleBulkAction(this.value)">
+                                            <option value="">...</option>
+                                            <option value="select_all">Marcar Todos</option>
+                                            <option value="deselect_all">Desmarcar Todos</option>
+                                            <option value="delete_selected">Excluir Selecionados</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
-                            <!-- AJ03: Removido resizer desta coluna para fixar o tamanho -->
                         </th>
                         ${th('atenNumeroPrimario', 'Nº Primário')}
                         ${th('atenNumeroSecundario', 'Nº Secundário')}
@@ -808,7 +824,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                     <td class="checkbox-col" onclick="event.stopPropagation()">
-                        <input type="checkbox" class="row-checkbox" data-id="${item.id}">
+                        <input type="checkbox" class="row-checkbox" data-id="${item.id}" onchange="syncSelectAllState()">
                     </td>
                     <td class="text-navy-primario">${item.atenNumeroPrimario || '-'}</td>
                     <td class="text-black-secundario">${item.atenNumeroSecundario || '-'}</td>
