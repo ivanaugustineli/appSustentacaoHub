@@ -54,32 +54,42 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Função: Indicador discreto de progresso de exclusão
+    // Função: Indicador discreto de progresso de exclusão em massa
     function showDeleteProgressModal(ids) {
         if (!ids || ids.length === 0) return;
         
         const total = ids.length;
-        let current = 0;
         
         deleteIndicator.classList.remove('hidden');
-        deleteIndicatorText.textContent = `Excluindo 1 de ${total}...`;
+        deleteIndicatorText.textContent = `Excluindo ${total} atendimentos...`;
         
         async function processDelete() {
-            for (const id of ids) {
-                current++;
-                deleteIndicatorText.textContent = `Excluindo ${current} de ${total}...`;
+            try {
+                const response = await fetch(`${API_URL}/bulk-delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(ids)
+                });
                 
-                try {
-                    await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-                } catch (e) {
-                    console.error(`Erro ao excluir ID ${id}:`, e);
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Erro ao excluir');
                 }
+                
+                const result = await response.json();
+                
+                deleteIndicator.classList.add('hidden');
+                closeModal();
+                currentFilters = {};
+                currentMultiFilters = {};
+                document.querySelectorAll('.table-filter').forEach(el => el.value = '');
+                loadAtendimentos();
+                customAlert(`${result.deleted} atendimento(s) excluído(s) com sucesso.`);
+            } catch (e) {
+                console.error('Erro ao excluir:', e);
+                deleteIndicator.classList.add('hidden');
+                customAlert('Erro ao excluir atendimentos. Tente novamente.');
             }
-            
-            deleteIndicator.classList.add('hidden');
-            closeModal();
-            loadAtendimentos();
-            customAlert(`${total} atendimento(s) excluído(s) com sucesso.`);
         }
         
         processDelete();
