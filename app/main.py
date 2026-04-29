@@ -74,6 +74,25 @@ async def delete_atendimento(atendimento_id: int, db: AsyncSession = Depends(get
     await db.commit()
     return {"detail": "Atendimento excluído com sucesso"}
 
+@app.post("/atendimentos/bulk-delete")
+async def bulk_delete_atendimentos(ids: List[int], db: AsyncSession = Depends(get_db)):
+    if not ids:
+        raise HTTPException(status_code=400, detail="Nenhum ID fornecido")
+    
+    result = await db.execute(select(Atendimento).where(Atendimento.id.in_(ids)))
+    atendimentos = result.scalars().all()
+    
+    if not atendimentos:
+        raise HTTPException(status_code=404, detail="Nenhum atendimento encontrado")
+    
+    deleted_count = 0
+    for atendimento in atendimentos:
+        await db.delete(atendimento)
+        deleted_count += 1
+    
+    await db.commit()
+    return {"detail": f"{deleted_count} atendimento(s) excluído(s) com sucesso", "deleted": deleted_count}
+
 # AJ12: Gerenciamento de Configuração Global (.SHconfig)
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", ".SHconfig")
 

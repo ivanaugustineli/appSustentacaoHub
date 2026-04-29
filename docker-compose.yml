@@ -3,15 +3,22 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: ivanaugustineli/appsustentacaohub:latest
+    container_name: shub_app
     volumes:
       - ./data:/code/data
     environment:
       - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///code/data/atendimentos.db}
+    networks:
+      - shub_net
     expose:
       - "8000"
 
   shub_web:
     image: nginx:alpine
+    container_name: shub_web
+    networks:
+      - shub_net
     ports:
       - "8080:80"
     volumes:
@@ -19,3 +26,7 @@ services:
       - ./static:/usr/share/nginx/html
     depends_on:
       - shub_app
+
+networks:
+  shub_net:
+    driver: bridge
