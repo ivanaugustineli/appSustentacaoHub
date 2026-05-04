@@ -159,12 +159,12 @@ body {
 }
 
 .data-table {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
 }
 
 .data-table th,
 .data-table td {
-    padding: 0.2rem 0.6rem;
+    padding: 0.15rem 0.5rem;
     /* AJ07: Altura reduzida nas linhas */
     border-bottom: 1px solid var(--border-color);
     border-right: 1px solid var(--border-color);
@@ -186,6 +186,7 @@ body {
     background-color: var(--primary-light);
     color: var(--primary-dark);
     font-weight: 600;
+    font-size: 0.8rem;
     border-right: 1px solid var(--border-color);
     /* AJ01: Divisória discreta */
     position: sticky; /* AJ17: Cabeçalho fixo */
@@ -211,6 +212,7 @@ body {
 .data-table tbody tr {
     cursor: pointer;
     transition: var(--transition);
+    height: 28px;
 }
 
 .data-table tbody tr:hover {
